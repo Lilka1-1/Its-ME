@@ -305,19 +305,21 @@ class GameLogic:
         finally:
             db.close()
     
-    async def start_round_timer(self, room_code: str, game_logic, seconds: int = 60):
-        for remaining in range(seconds, -1, -1):
-            await manager.broadcast_to_room(room_code, {
-                "type": "timer_update",
-                "data": {
-                    "seconds": remaining,
-                    "total": seconds
-                }
-            })
-            if remaining > 0:
-                await asyncio.sleep(1)
-        
-        await game_logic.end_round(room_code)
+async def start_round_timer(self, room_code: str, game_logic, seconds: int = 60):
+    print(f"⏱️ TIMER START: room={room_code}, seconds={seconds}")
+    for remaining in range(seconds, -1, -1):
+        await manager.broadcast_to_room(room_code, {
+            "type": "timer_update",
+            "data": {
+                "seconds": remaining,
+                "total": seconds
+            }
+        })
+        if remaining > 0:
+            await asyncio.sleep(1)
+    
+    print(f"⏱️ TIMER END: room={room_code}")
+    await game_logic.end_round(room_code)
     
     async def handle_vote(self, room_code: str, voter_id: int, word_guessed: bool):
         db = self.db_session_factory()
