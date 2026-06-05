@@ -221,7 +221,7 @@ class GameLogic:
                     }
                 })
             
-            asyncio.create_task(manager.start_round_timer(room_code, self, room.timer_seconds))
+            asyncio.create_task(self.start_round_timer(room_code, self, room.timer_seconds))
             
         finally:
             db.close()
@@ -293,7 +293,7 @@ class GameLogic:
                         }
                     })
                 
-                asyncio.create_task(manager.start_round_timer(room_code, self, room.timer_seconds))
+                asyncio.create_task(self.start_round_timer(room_code, self, room.timer_seconds))
             else:
                 winner = max(players, key=lambda p: p.score)
                 await manager.broadcast_to_room(room_code, {
