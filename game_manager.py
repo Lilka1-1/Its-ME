@@ -21,13 +21,17 @@ class ConnectionManager:
                 del self.active_connections[room_code]
                 
     async def broadcast_to_room(self, room_code: str, message: dict, exclude_player: int = None):
-        if room_code in self.active_connections:
-            for player_id, connection in list(self.active_connections[room_code].items()):
-                if player_id != exclude_player:
-                    try:
-                        await connection.send_json(message)
-                    except:
-                        pass
+    print(f"📡 BROADCAST to room={room_code}, type={message.get('type')}, players={list(self.active_connections.get(room_code, {}).keys())}")
+    if room_code in self.active_connections:
+        for player_id, connection in list(self.active_connections[room_code].items()):
+            if player_id != exclude_player:
+                try:
+                    await connection.send_json(message)
+                    print(f"  ✅ Sent to player {player_id}")
+                except Exception as e:
+                    print(f"  ❌ Failed to send to player {player_id}: {e}")
+    else:
+        print(f"  ❌ Room {room_code} not found in connections")
     
     async def send_to_player(self, room_code: str, player_id: int, message: dict):
         if room_code in self.active_connections and player_id in self.active_connections[room_code]:
@@ -308,6 +312,7 @@ class GameLogic:
 async def start_round_timer(self, room_code: str, game_logic, seconds: int = 60):
     print(f"⏱️ TIMER START: room={room_code}, seconds={seconds}")
     for remaining in range(seconds, -1, -1):
+        print(f"⏱️ TIMER TICK: {remaining}")
         await manager.broadcast_to_room(room_code, {
             "type": "timer_update",
             "data": {
