@@ -462,21 +462,30 @@ function sendPhrase(){
 
 /* ================= VOTE FIX ================= */
 function renderPlayers(){
+    const c = document.getElementById("playersVote");
     const voteBtn = document.getElementById("voteBtn");
 
+    c.innerHTML = "";
+    selectedVote = null;
+
+    // если это твоя фраза
     if(playerId === currentAuthorId){
-        c.innerHTML = "<h3>Ты автор — ожидай голосование</h3>";
+        c.innerHTML = `
+            <h3>Ты автор — ожидай голосование</h3>
+        `;
         voteBtn.style.display = "none";
         return;
     }
 
-voteBtn.style.display = "block";
+    // остальные игроки голосуют
+    voteBtn.style.display = "block";
 
     players.forEach(p=>{
-        if(p.id === playerId) return; // нельзя голосовать за себя
+        // нельзя голосовать за себя
+        if(p.id === playerId) return;
 
         const d = document.createElement("div");
-        d.className="player";
+        d.className = "player";
         d.innerText = p.nickname;
 
         d.onclick = ()=>{
