@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Word Game</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    padding:20px;
+    min-height:100vh;
+    font-family:"Segoe UI",sans-serif;
+    color:#f3e8d2;
+
+    background:
+        linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.65)),
+        url("/static/images/background.jpg");
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+    padding:30px;
+    border-radius:24px;
+    background:rgba(20,16,14,.9);
+    border:1px solid rgba(201,160,74,.25);
+    box-shadow:
+        0 0 50px rgba(0,0,0,.7),
+        0 0 25px rgba(140,75,20,.15);
+    backdrop-filter:blur(8px);
+}
+
+h1,h2,h3{
+    color:#d9b36a;
+    text-align:center;
+    font-weight:300;
+    letter-spacing:2px;
+    text-transform:uppercase;
+}
+
+input{
+    width:100%;
+    padding:12px 15px;
+    margin:8px 0;
+    border-radius:10px;
+    border:1px solid #5c4834;
+    background:#1b1715;
+    color:#f3e8d2;
+    font-size:15px;
+    transition:.25s;
+}
+
+input:focus{
+    outline:none;
+    border-color:#c89b3c;
+    box-shadow:0 0 12px rgba(200,155,60,.35);
+}
+
+button{
+    padding:12px 22px;
+    margin:6px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    color:#fdf5e6;
+    font-weight:600;
+    background:linear-gradient(180deg,#8b5a2b,#5f3415);
+    transition:.25s;
+    box-shadow:0 4px 10px rgba(0,0,0,.45);
+}
+
+button:hover{
+    transform:translateY(-2px);
+    background:linear-gradient(180deg,#b67b34,#74411c);
+    box-shadow:0 0 20px rgba(201,160,74,.35);
+}
+
+button:disabled{
+    background:#444;
+    color:#888;
+    cursor:not-allowed;
+    transform:none;
+    box-shadow:none;
+}
+
+.screen{
+    display:none;
+}
+
+.screen.active{
+    display:block;
+}
+
+.hidden{
+    display:none;
+}
+
+.player{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin:10px 0;
+    padding:14px;
+    border-radius:12px;
+    background:#241b18;
+    border:1px solid rgba(201,160,74,.18);
+    transition:.25s;
+    cursor:pointer;
+}
+
+.player:hover{
+    background:#31231d;
+}
+
+.player.selected{
+    background:linear-gradient(90deg,#8a5a21,#c89b3c);
+    color:#111;
+    font-weight:bold;
+}
+
+#myPhrase,
+#resultBox,
+#voteBox,
+#collectBox{
+    margin-top:18px;
+    padding:18px;
+    border-radius:16px;
+    background:#181311;
+    border:1px solid rgba(201,160,74,.2);
+    box-shadow:inset 0 0 18px rgba(255,180,90,.05);
+}
+
+#resultBox{
+    animation:fade .4s ease;
+}
+
+#timer,
+#collectTimer{
+    color:#e5b45d;
+    font-weight:bold;
+    font-size:22px;
+}
+
+b{
+    color:#e3c17a;
+}
+
+::placeholder{
+    color:#887565;
+}
+
+@keyframes fade{
+    from{
+        opacity:0;
+        transform:translateY(12px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+</style>
+</head>
+
+<body>
+
+<audio id="bgMusic" autoplay loop>
+    <source src="/static/music/jazz.mp3" type="audio/mpeg">
+</audio>
+
+    
+<div class="container">
+
+<h1>Word Game</h1>
+
+<!-- MENU -->
+<div id="menu" class="screen active">
+    <input id="nickname" placeholder="Nickname">
+    <button onclick="createRoom()">Create</button>
+    <input id="roomCode" placeholder="Room code">
+    <button onclick="joinRoom()">Join</button>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby" class="screen">
+    <h2>Lobby</h2>
+    <div>Room: <b id="roomCodeDisplay"></b></div>
+    <div id="playersLobby"></div>
+    <button id="startBtn" onclick="startGame()">START GAME</button>
+    <button id="leaveBtn" onclick="leaveRoom()">Выйти из комнаты</button>
+    <button id="deleteBtn" onclick="deleteRoom()">Удалить комнату</button>
+</div>
+
+<!-- GAME -->
+<div id="game" class="screen">
+
+    <h2 id="phaseText">Waiting...</h2>
+
+    <div>⏳ <span id="timer">0</span></div>
+
+    <!-- COLLECT -->
+    <div id="collectBox" class="hidden">
+        <h3>Напиши фразу</h3>
+        <div>осталось: <span id="collectTimer">30</span></div>
+
+        <input id="phraseInput" placeholder="Твоя фраза">
+        <button id="sendBtn" onclick="sendPhrase()">Send</button>
+
+        <div id="myPhrase"></div>
+    </div>
+
+    <!-- VOTE -->
+    <div id="voteBox" class="hidden">
+        <h3 id="phraseToGuess"></h3>
+        <div id="playersVote"></div>
+        <button onclick="sendVote()">Vote</button>
+    </div>
+
+    <!-- RESULT -->
+    <div id="resultBox" class="hidden"></div>
+
+    <div id="endButtons" class="hidden">
+        <button id="endLeaveBtn" onclick="leaveRoom()">
+            Выйти из комнаты
+        </button>
+
+        <button id="endDeleteBtn" onclick="deleteRoom()">
+            Удалить комнату
+        </button>
+    </div>
+
+</div>
+
+</div>
+
+<script>
+
+let ws;
+let roomCode;
+let playerId;
+let players = [];
+
+let isHost = false;
+let selectedVote = null;
+let currentAuthorId = null;
+
+let phraseSent = false;
+let timerInterval = null;
+
+/* ================= START BUTTON ================= */
+function updateStartButton(){
+    const btn = document.getElementById("startBtn");
+    const leaveBtn = document.getElementById("leaveBtn");
+    const deleteBtn = document.getElementById("deleteBtn");
+
+    if(btn){
+        btn.style.display = isHost ? "block" : "none";
+        btn.disabled = players.length < 2;
+    }
+
+    // у хоста нет кнопки "выйти" — только "удалить комнату"
+    if(leaveBtn) leaveBtn.style.display = isHost ? "none" : "block";
+    if(deleteBtn) deleteBtn.style.display = isHost ? "block" : "none";
+}
+
+/* ================= TIMER ================= */
+function startTimer(sec){
+    clearInterval(timerInterval);
+
+    let t = sec;
+
+    document.getElementById("timer").innerText = t;
+    document.getElementById("collectTimer").innerText = t;
+
+    timerInterval = setInterval(()=>{
+        t--;
+
+        document.getElementById("timer").innerText = t;
+        const ct = document.getElementById("collectTimer");
+        if(ct) ct.innerText = t;
+
+        if(t <= 0) clearInterval(timerInterval);
+
+    },1000);
+}
+
+/* ================= RESET ROUND ================= */
+function resetRound(){
+    phraseSent = false;
+    selectedVote = null;
+
+    const input = document.getElementById("phraseInput");
+    const btn = document.getElementById("sendBtn");
+
+    input.disabled = false;
+    btn.disabled = false;
+
+    input.value = "";
+    document.getElementById("myPhrase").innerHTML = "";
+}
+
+/* ================= WS ================= */
+function connectWS(){
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    ws = new WebSocket(`${proto}://${location.host}/ws/${roomCode}/${playerId}`);
+
+    ws.onmessage = (e)=>{
+        const msg = JSON.parse(e.data);
+
+        if(msg.type==="player_joined"){
+            updateLobby();
+            updateStartButton();
+        }
+
+        /* ========== PLAYER LEFT (кто-то ушёл из комнаты) ========== */
+        if(msg.type==="player_left"){
+            updateLobby();
+        }
+
+        /* ========== Я ВЫШЕЛ ИЗ КОМНАТЫ ========== */
+        if(msg.type==="left_room"){
+            backToMenu();
+        }
+
+        /* ========== КОМНАТА УДАЛЕНА ХОСТОМ ========== */
+        if(msg.type==="room_deleted"){
+            alert("Комната была удалена создателем.");
+            backToMenu();
+        }
+
+        /* ========== COLLECT ========== */
+        if(msg.type==="start_collecting"){
+            show("game");
+            resetRound();
+            document.getElementById("endButtons")
+            .classList.add("hidden");
+
+            document.getElementById("phaseText").innerText="COLLECT";
+
+            document.getElementById("collectBox").classList.remove("hidden");
+            document.getElementById("voteBox").classList.add("hidden");
+            document.getElementById("resultBox").classList.add("hidden");
+
+            startTimer(30);
+        }
+
+        /* ========== VOTE ========== */
+        if(msg.type==="start_voting"){
+            document.getElementById("phaseText").innerText="VOTE";
+
+            document.getElementById("collectBox").classList.add("hidden");
+            document.getElementById("voteBox").classList.remove("hidden");
+
+            currentAuthorId = msg.data.author_id;
+
+            document.getElementById("phraseToGuess").innerText =
+                "Фраза: " + msg.data.phrase;
+
+            renderPlayers();
+
+            startTimer(60);
+        }
+
+        /* ========== RESULT ========== */
+        if(msg.type==="reveal_author"){
+            document.getElementById("resultBox").classList.remove("hidden");
+
+            const ok = msg.data.correctVoters.includes(playerId);
+
+            document.getElementById("resultBox").innerHTML = `
+                <h3>Раунд завершён</h3>
+                <p><b>Фраза:</b> ${msg.data.phrase}</p>
+                <p><b>Автор:</b> ${msg.data.author}</p>
+                <p style="color:${ok?'green':'red'}">
+                    ${ok ? "+2 очка" : "0 очков"}
+                </p>
+            `;
+        }
+
+        /* ========== GAME END (FIXED UI) ========== */
+        if(msg.type==="game_end"){
+        document.getElementById("resultBox")
+            .classList.remove("hidden");
+
+        let html = "<h2>GAME OVER</h2>";
+
+        const scores = msg.data.final_scores || {};
+        const sorted = Object.entries(scores)
+            .sort((a,b)=>b[1]-a[1]);
+
+        sorted.forEach(([name,score],i)=>{
+            html += `
+                <div class="player">
+                    #${i+1} ${name} — ${score}
+                </div>
+            `;
+        });
+
+        document.getElementById("resultBox").innerHTML = html;
+
+        const endButtons =
+            document.getElementById("endButtons");
+
+        endButtons.classList.remove("hidden");
+
+        document.getElementById("endLeaveBtn")
+            .style.display = isHost ? "none" : "block";
+
+        document.getElementById("endDeleteBtn")
+            .style.display = isHost ? "block" : "none";
+    }
+    };
+}
+
+/* ================= LOBBY ================= */
+async function updateLobby(){
+    const res = await fetch(`/api/rooms/${roomCode}`);
+    const data = await res.json();
+
+    players = data.players || [];
+
+    const c = document.getElementById("playersLobby");
+    c.innerHTML = "";
+
+    players.forEach(p=>{
+        const d = document.createElement("div");
+        d.className="player";
+        d.innerText=p.nickname;
+        c.appendChild(d);
+    });
+
+    updateStartButton();
+}
+
+/* ================= PHRASE ================= */
+function sendPhrase(){
+    if(phraseSent) return;
+
+    const text = document.getElementById("phraseInput").value;
+    if(!text) return;
+
+    ws.send(JSON.stringify({
+        type:"submit_phrase",
+        data:{text}
+    }));
+
+    phraseSent = true;
+    document.getElementById("sendBtn").disabled = true;
+
+    document.getElementById("myPhrase").innerHTML =
+        `<b>Твоя фраза:</b> ${text}`;
+}
+
+/* ================= VOTE FIX ================= */
+function renderPlayers(){
+    const c = document.getElementById("playersVote");
+    c.innerHTML = "";
+
+    /* автор НЕ участвует в голосовании вообще */
+    if(playerId === currentAuthorId){
+        c.innerHTML = "<h3>Ты автор — ожидай голосование</h3>";
+        return;
+    }
+
+    players.forEach(p=>{
+        if(p.id === playerId) return; // нельзя голосовать за себя
+
+        const d = document.createElement("div");
+        d.className="player";
+        d.innerText = p.nickname;
+
+        d.onclick = ()=>{
+            selectedVote = p.id;
+
+            document.querySelectorAll("#playersVote .player")
+                .forEach(x=>x.classList.remove("selected"));
+
+            d.classList.add("selected");
+        };
+
+        c.appendChild(d);
+    });
+}
+
+/* ================= SEND VOTE ================= */
+function sendVote(){
+    if(!selectedVote) return;
+
+    ws.send(JSON.stringify({
+        type:"vote",
+        data:{voted_player_id:selectedVote}
+    }));
+
+    document.querySelectorAll("#playersVote .player")
+        .forEach(x=>x.style.pointerEvents="none");
+}
+
+/* ================= LEAVE / DELETE ROOM ================= */
+function leaveRoom(){
+    if(!confirm("Выйти из комнаты?")) return;
+    ws.send(JSON.stringify({type:"leave_room"}));
+}
+
+function deleteRoom(){
+    if(!confirm("Удалить комнату? Это действие нельзя отменить.")) return;
+    ws.send(JSON.stringify({type:"delete_room"}));
+}
+
+function backToMenu(){
+    if(ws){
+        try{ ws.close(); }catch(e){}
+    }
+
+    clearInterval(timerInterval);
+
+    roomCode = null;
+    playerId = null;
+    players = [];
+    isHost = false;
+    selectedVote = null;
+    currentAuthorId = null;
+
+    document.getElementById("endButtons")
+    .classList.add("hidden");
+
+    document.getElementById("nickname").value = "";
+    document.getElementById("roomCode").value = "";
+
+    show("menu");
+}
+
+/* ================= START ================= */
+function startGame(){
+    if(!isHost) return;
+    ws.send(JSON.stringify({type:"start_game"}));
+}
+
+/* ================= NAV ================= */
+function show(id){
+    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+}
+
+/* ================= CREATE / JOIN ================= */
+async function createRoom(){
+    const res = await fetch("/api/rooms/create",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({host_nickname:document.getElementById("nickname").value})
+    });
+
+    const data = await res.json();
+
+    roomCode=data.room_code;
+    playerId=data.player_id;
+    isHost=true;
+
+    document.getElementById("roomCodeDisplay").innerText=roomCode;
+
+    connectWS();
+    show("lobby");
+    updateLobby();
+}
+
+async function joinRoom(){
+    const res = await fetch("/api/rooms/join",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            nickname:document.getElementById("nickname").value,
+            room_code:document.getElementById("roomCode").value
+        })
+    });
+
+    const data = await res.json();
+
+    roomCode=document.getElementById("roomCode").value;
+    playerId=data.player_id;
+    isHost=false;
+
+    connectWS();
+    show("lobby");
+    updateLobby();
+}
+
+</script>
+
+</body>
+</html>
